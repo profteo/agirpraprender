@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agir para Aprender - Plataforma de Gestão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .tab-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">Agir para Aprender</h1>
+                    <p class="text-sm opacity-90">Plataforma de Gestão do Plano de Ação</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge" id="notifBadge">3</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <button onclick="toggleDataMenu()" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition" title="Gestão de Dados">
+                            <i class="fas fa-database"></i>
+                        </button>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-semibold" id="userName">Coordenador</p>
+                        <button onclick="logout()" class="text-xs opacity-75 hover:opacity-100">Sair</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal active">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Acesso à Plataforma</h2>
+            <form onsubmit="login(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Perfil</label>
+                    <select id="loginProfile" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                        <option value="coordenador">Coordenador</option>
+                        <option value="docente">Docente</option>
+                        <option value="aluno">Aluno</option>
+                    </select>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 mb-2">Nome</label>
+                    <input type="text" id="loginName" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Insira o seu nome" required>
+                </div>
+                <button type="submit" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                    Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notifications Panel -->
+    <div id="notifPanel" class="hidden fixed right-4 top-20 bg-white rounded-lg shadow-xl w-80 z-50 fade-in">
+        <div class="p-4 border-b">
+            <h3 class="font-bold text-gray-800">Notificações</h3>
+        </div>
+        <div class="p-4 space-y-3 max-h-96 overflow-y-auto">
+            <div class="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                <p class="text-sm font-semibold text-gray-800">Reunião amanhã</p>
+                <p class="text-xs text-gray-600">Círculo de partilha docente às 14h30</p>
+            </div>
+            <div class="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                <p class="text-sm font-semibold text-gray-800">Nova boa prática partilhada</p>
+                <p class="text-xs text-gray-600">Prof. Maria Silva - Gamificação em Matemática</p>
+            </div>
+            <div class="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                <p class="text-sm font-semibold text-gray-800">Observação de aula pendente</p>
+                <p class="text-xs text-gray-600">Agendar intervisão pedagógica</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Management Panel -->
+    <div id="dataMenuPanel" class="hidden fixed right-4 top-20 bg-white rounded-lg shadow-xl w-80 z-50 fade-in">
+        <div class="p-4 border-b">
+            <h3 class="font-bold text-gray-800">Gestão de Dados</h3>
+        </div>
+        <div class="p-4 space-y-3">
+            <button onclick="backupData()" class="w-full flex items-center gap-3 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg border-l-4 border-blue-500 transition text-left">
+                <i class="fas fa-download text-blue-600 text-xl"></i>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">Fazer Backup</p>
+                    <p class="text-xs text-gray-600">Guardar dados localmente</p>
+                </div>
+            </button>
+            
+            <button onclick="document.getElementById('restoreFileInput').click()" class="w-full flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg border-l-4 border-green-500 transition text-left">
+                <i class="fas fa-upload text-green-600 text-xl"></i>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">Restaurar Backup</p>
+                    <p class="text-xs text-gray-600">Carregar dados guardados</p>
+                </div>
+            </button>
+            <input type="file" id="restoreFileInput" accept=".json" style="display: none;" onchange="restoreData(event)">
+            
+            <button onclick="resetToDefaults()" class="w-full flex items-center gap-3 p-3 bg-orange-50 hover:bg-orange-100 rounded-lg border-l-4 border-orange-500 transition text-left">
+                <i class="fas fa-undo text-orange-600 text-xl"></i>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">Repor Predefinições</p>
+                    <p class="text-xs text-gray-600">Voltar aos dados iniciais</p>
+                </div>
+            </button>
+            
+            <button onclick="clearAllData()" class="w-full flex items-center gap-3 p-3 bg-red-50 hover:bg-red-100 rounded-lg border-l-4 border-red-500 transition text-left">
+                <i class="fas fa-trash text-red-600 text-xl"></i>
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">Limpar Todos os Dados</p>
+                    <p class="text-xs text-gray-600">Apagar tudo (irreversível)</p>
+                </div>
+            </button>
+            
+            <div class="pt-3 border-t">
+                <p class="text-xs text-gray-500 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Dados guardados no navegador
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="hidden">
+        <!-- Navigation Tabs -->
+        <nav class="bg-white shadow-md">
+            <div class="container mx-auto px-4">
+                <div class="flex overflow-x-auto">
+                    <button onclick="showTab('dashboard')" class="tab-button tab-active px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-chart-line mr-2"></i>Dashboard
+                    </button>
+                    <button onclick="showTab('docentes')" class="tab-button px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-users mr-2"></i>Docentes
+                    </button>
+                    <button onclick="showTab('turmas')" class="tab-button px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-chalkboard mr-2"></i>Turmas
+                    </button>
+                    <button onclick="showTab('calendario')" class="tab-button px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-calendar-alt mr-2"></i>Calendário
+                    </button>
+                    <button onclick="showTab('praticas')" class="tab-button px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-lightbulb mr-2"></i>Boas Práticas
+                    </button>
+                    <button onclick="showTab('monitorizacao')" class="tab-button px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-chart-bar mr-2"></i>Monitorização
+                    </button>
+                    <button onclick="showTab('alunos')" class="tab-button px-6 py-4 font-semibold whitespace-nowrap transition">
+                        <i class="fas fa-comments mr-2"></i>Voz dos Alunos
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Tab Contents -->
+        <div class="container mx-auto px-4 py-8">
+            
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="card bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Docentes Envolvidos</p>
+                                <p class="text-3xl font-bold text-purple-600" id="kpiDocentes">12</p>
+                                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> Meta: ≥10</p>
+                            </div>
+                            <div class="bg-purple-100 p-4 rounded-full">
+                                <i class="fas fa-user-tie text-purple-600 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Turmas-Piloto</p>
+                                <p class="text-3xl font-bold text-blue-600" id="kpiTurmas">6</p>
+                                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> Meta: ≥5</p>
+                            </div>
+                            <div class="bg-blue-100 p-4 rounded-full">
+                                <i class="fas fa-chalkboard-teacher text-blue-600 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Taxa Participação</p>
+                                <p class="text-3xl font-bold text-green-600" id="kpiParticipacao">65%</p>
+                                <p class="text-xs text-green-600 mt-1"><i class="fas fa-arrow-up"></i> Meta: ≥60%</p>
+                            </div>
+                            <div class="bg-green-100 p-4 rounded-full">
+                                <i class="fas fa-chart-line text-green-600 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-500 text-sm">Ações Formação</p>
+                                <p class="text-3xl font-bold text-orange-600" id="kpiFormacoes">2</p>
+                                <p class="text-xs text-green-600 mt-1"><i class="fas fa-check"></i> Meta atingida</p>
+                            </div>
+                            <div class="bg-orange-100 p-4 rounded-full">
+                                <i class="fas fa-graduation-cap text-orange-600 text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress and Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Progresso das Fases</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-semibold text-gray-700">Fase 1: A Semente da Mudança</span>
+                                    <span class="text-sm font-bold text-green-600">100%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-green-500 h-3 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-semibold text-gray-700">Fase 2: Mãos à Obra</span>
+                                    <span class="text-sm font-bold text-blue-600">60%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-blue-500 h-3 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-semibold text-gray-700">Fase 3: O Florescer das Práticas</span>
+                                    <span class="text-sm font-bold text-gray-400">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-gray-400 h-3 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Distribuição de Metodologias</h3>
+                        <canvas id="metodologiasChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-6 text-gray-800">Próximas Atividades</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                            <div class="bg-purple-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">30</div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800">Círculo de Partilha Docente</h4>
+                                <p class="text-sm text-gray-600">Reunião mensal - Sala de Professores, 14h30</p>
+                                <span class="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full mt-2 inline-block">Outubro 2025</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                            <div class="bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">05</div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800">Observação Entre Pares</h4>
+                                <p class="text-sm text-gray-600">Prof. Silva observa Prof. Costa - Turma 7ºA</p>
+                                <span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full mt-2 inline-block">Novembro 2025</span>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                            <div class="bg-green-500 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold">12</div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800">Workshop: Gamificação em Sala de Aula</h4>
+                                <p class="text-sm text-gray-600">Formação interna - Auditório, 15h00</p>
+                                <span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full mt-2 inline-block">Novembro 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Docentes Tab -->
+            <div id="tab-docentes" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Núcleo Pioneiro - Docentes</h2>
+                    <button onclick="showAddDocenteModal()" class="gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-plus mr-2"></i>Adicionar Docente
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-purple-100 p-4 rounded-full">
+                                <i class="fas fa-users text-purple-600 text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Total de Docentes</p>
+                                <p class="text-3xl font-bold text-gray-800" id="totalDocentes">12</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-green-100 p-4 rounded-full">
+                                <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Ativos</p>
+                                <p class="text-3xl font-bold text-gray-800">10</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-blue-100 p-4 rounded-full">
+                                <i class="fas fa-eye text-blue-600 text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Intervisões Realizadas</p>
+                                <p class="text-3xl font-bold text-gray-800">8</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disciplina</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turmas</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participação</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="docentesTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Turmas Tab -->
+            <div id="tab-turmas" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Turmas-Piloto</h2>
+                    <button onclick="showAddTurmaModal()" class="gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-plus mr-2"></i>Adicionar Turma
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="turmasGrid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Calendário Tab -->
+            <div id="tab-calendario" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Calendário de Atividades</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-purple-600">
+                                <i class="fas fa-seedling mr-2"></i>Fase 1: A Semente da Mudança (1º Período)
+                            </h3>
+                            <div class="space-y-3" id="fase1Activities">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-blue-600">
+                                <i class="fas fa-hands-helping mr-2"></i>Fase 2: Mãos à Obra (2º Período)
+                            </h3>
+                            <div class="space-y-3" id="fase2Activities">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-xl font-bold mb-4 text-green-600">
+                                <i class="fas fa-flower mr-2"></i>Fase 3: O Florescer das Práticas (3º Período)
+                            </h3>
+                            <div class="space-y-3" id="fase3Activities">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-lg font-bold mb-4 text-gray-800">Adicionar Atividade</h3>
+                            <form onsubmit="addActivity(event)">
+                                <div class="space-y-3">
+                                    <input type="text" id="activityTitle" placeholder="Título" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                                    <input type="date" id="activityDate" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                                    <select id="activityPhase" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                                        <option value="1">Fase 1</option>
+                                        <option value="2">Fase 2</option>
+                                        <option value="3">Fase 3</option>
+                                    </select>
+                                    <textarea id="activityDesc" placeholder="Descrição" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" rows="3"></textarea>
+                                    <button type="submit" class="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold hover:bg-purple-700 transition">
+                                        Adicionar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl shadow-lg p-6 text-white">
+                            <h3 class="text-lg font-bold mb-2">Próxima Reunião</h3>
+                            <p class="text-2xl font-bold mb-1">30 Outubro</p>
+                            <p class="text-sm opacity-90">Círculo de Partilha Docente</p>
+                            <p class="text-xs opacity-75 mt-2">14h30 - Sala de Professores</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boas Práticas Tab -->
+            <div id="tab-praticas" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Repositório de Boas Práticas</h2>
+                    <button onclick="showAddPraticaModal()" class="gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-plus mr-2"></i>Partilhar Prática
+                    </button>
+                </div>
+
+                <div class="mb-6 flex flex-wrap gap-3">
+                    <button onclick="filterPraticas('todas')" class="pratica-filter px-4 py-2 rounded-lg bg-purple-600 text-white font-semibold">Todas</button>
+                    <button onclick="filterPraticas('cooperativa')" class="pratica-filter px-4 py-2 rounded-lg bg-gray-200 text-gray-700">Aprendizagem Cooperativa</button>
+                    <button onclick="filterPraticas('invertida')" class="pratica-filter px-4 py-2 rounded-lg bg-gray-200 text-gray-700">Sala Invertida</button>
+                    <button onclick="filterPraticas('gamificacao')" class="pratica-filter px-4 py-2 rounded-lg bg-gray-200 text-gray-700">Gamificação</button>
+                    <button onclick="filterPraticas('projetos')" class="pratica-filter px-4 py-2 rounded-lg bg-gray-200 text-gray-700">Trabalho por Projetos</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="praticasGrid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Monitorização Tab -->
+            <div id="tab-monitorizacao" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Monitorização e Avaliação</h2>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Indicadores de Processo</h3>
+                        <canvas id="processChart"></canvas>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Indicadores de Resultados</h3>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-green-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-gray-700">Motivação dos Alunos</span>
+                                    <span class="text-green-600 font-bold">72%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 72%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-2">Meta: ≥70% referem maior interesse</p>
+                            </div>
+
+                            <div class="p-4 bg-blue-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-gray-700">Autoeficácia Docente</span>
+                                    <span class="text-blue-600 font-bold">85%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 85%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-2">Meta: ≥80% referem aumento de confiança</p>
+                            </div>
+
+                            <div class="p-4 bg-purple-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-gray-700">Diversidade Metodológica</span>
+                                    <span class="text-purple-600 font-bold">+35%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-500 h-2 rounded-full" style="width: 70%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-2">Meta: +30% práticas ativas</p>
+                            </div>
+
+                            <div class="p-4 bg-orange-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-gray-700">Redução Absentismo</span>
+                                    <span class="text-orange-600 font-bold">-12%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-orange-500 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-2">Meta: Redução ≥10%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">Questionários e Observações</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="showQuestionario('docentes')" class="p-6 border-2 border-purple-200 rounded-lg hover:border-purple-500 transition">
+                            <i class="fas fa-clipboard-list text-purple-600 text-3xl mb-3"></i>
+                            <h4 class="font-semibold text-gray-800">Questionário Docentes</h4>
+                            <p class="text-sm text-gray-600 mt-2">Autoavaliação e feedback</p>
+                        </button>
+                        <button onclick="showQuestionario('alunos')" class="p-6 border-2 border-blue-200 rounded-lg hover:border-blue-500 transition">
+                            <i class="fas fa-users text-blue-600 text-3xl mb-3"></i>
+                            <h4 class="font-semibold text-gray-800">Questionário Alunos</h4>
+                            <p class="text-sm text-gray-600 mt-2">Perceção e motivação</p>
+                        </button>
+                        <button onclick="showObservacao()" class="p-6 border-2 border-green-200 rounded-lg hover:border-green-500 transition">
+                            <i class="fas fa-eye text-green-600 text-3xl mb-3"></i>
+                            <h4 class="font-semibold text-gray-800">Grelha Observação</h4>
+                            <p class="text-sm text-gray-600 mt-2">Intervisão pedagógica</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">Relatórios</h3>
+                        <button onclick="exportRelatorio()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                            <i class="fas fa-download mr-2"></i>Exportar Relatório
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 border rounded-lg">
+                            <h4 class="font-semibold text-gray-800 mb-2">Relatório Intermédio</h4>
+                            <p class="text-sm text-gray-600 mb-3">Avaliação do 2º Período</p>
+                            <button class="text-purple-600 hover:text-purple-800 text-sm font-semibold">
+                                <i class="fas fa-file-pdf mr-1"></i>Ver Relatório
+                            </button>
+                        </div>
+                        <div class="p-4 border rounded-lg bg-gray-50">
+                            <h4 class="font-semibold text-gray-800 mb-2">Relatório Final</h4>
+                            <p class="text-sm text-gray-600 mb-3">Avaliação do 3º Período</p>
+                            <span class="text-gray-400 text-sm">Disponível em Junho 2026</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voz dos Alunos Tab -->
+            <div id="tab-alunos" class="tab-content hidden">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Voz dos Alunos</h2>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-lg p-6 text-white">
+                        <i class="fas fa-users text-4xl mb-3 opacity-80"></i>
+                        <p class="text-sm opacity-90">Alunos Participantes</p>
+                        <p class="text-4xl font-bold">142</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-green-500 to-teal-500 rounded-xl shadow-lg p-6 text-white">
+                        <i class="fas fa-comments text-4xl mb-3 opacity-80"></i>
+                        <p class="text-sm opacity-90">Testemunhos Recolhidos</p>
+                        <p class="text-4xl font-bold">28</p>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl shadow-lg p-6 text-white">
+                        <i class="fas fa-smile text-4xl mb-3 opacity-80"></i>
+                        <p class="text-sm opacity-90">Satisfação Média</p>
+                        <p class="text-4xl font-bold">4.3<span class="text-2xl">/5</span></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">
+                            <i class="fas fa-microphone-alt text-purple-600 mr-2"></i>Mural Digital
+                        </h3>
+                        <div class="space-y-3 max-h-96 overflow-y-auto" id="muralAlunos">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                        <button onclick="showAddTestemunho()" class="mt-4 w-full bg-purple-100 text-purple-600 py-2 rounded-lg font-semibold hover:bg-purple-200 transition">
+                            <i class="fas fa-plus mr-2"></i>Adicionar Testemunho
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">
+                            <i class="fas fa-poll text-blue-600 mr-2"></i>Questionário de Perceção
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">As novas metodologias tornaram as aulas mais interessantes?</label>
+                                <div class="flex gap-2">
+                                    <button class="flex-1 py-2 bg-green-100 text-green-700 rounded-lg font-semibold">Sim (78%)</button>
+                                    <button class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg">Não (22%)</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Sentes que aprendes melhor com estas metodologias?</label>
+                                <div class="flex gap-2">
+                                    <button class="flex-1 py-2 bg-green-100 text-green-700 rounded-lg font-semibold">Sim (72%)</button>
+                                    <button class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg">Não (28%)</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Preferes trabalhar em grupo ou individualmente?</label>
+                                <div class="flex gap-2">
+                                    <button class="flex-1 py-2 bg-blue-100 text-blue-700 rounded-lg font-semibold">Grupo (65%)</button>
+                                    <button class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg">Individual (35%)</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="mt-4 w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                            Responder Questionário Completo
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">
+                        <i class="fas fa-images text-orange-600 mr-2"></i>Galeria de Evidências
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="aspect-square bg-gradient-to-br from-purple-400 to-pink-400 rounded-lg flex items-center justify-center text-white">
+                            <i class="fas fa-image text-4xl opacity-50"></i>
+                        </div>
+                        <div class="aspect-square bg-gradient-to-br from-blue-400 to-cyan-400 rounded-lg flex items-center justify-center text-white">
+                            <i class="fas fa-image text-4xl opacity-50"></i>
+                        </div>
+                        <div class="aspect-square bg-gradient-to-br from-green-400 to-teal-400 rounded-lg flex items-center justify-center text-white">
+                            <i class="fas fa-image text-4xl opacity-50"></i>
+                        </div>
+                        <div class="aspect-square bg-gradient-to-br from-orange-400 to-red-400 rounded-lg flex items-center justify-center text-white">
+                            <i class="fas fa-plus text-4xl opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Docente Modal -->
+    <div id="addDocenteModal" class="modal">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Docente</h2>
+            <form onsubmit="addDocente(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Nome</label>
+                        <input type="text" id="docenteNome" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Departamento</label>
+                        <select id="docenteDepartamento" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                            <option>Matemática e Ciências</option>
+                            <option>Línguas</option>
+                            <option>Ciências Sociais e Humanas</option>
+                            <option>Expressões</option>
+                            <option>1º Ciclo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Disciplina</label>
+                        <input type="text" id="docenteDisciplina" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Turmas</label>
+                        <input type="text" id="docenteTurmas" placeholder="Ex: 7ºA, 8ºB" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal('addDocenteModal')" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Turma Modal -->
+    <div id="addTurmaModal" class="modal">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Adicionar Turma-Piloto</h2>
+            <form onsubmit="addTurma(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Ano</label>
+                        <select id="turmaAno" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                            <option>5º</option>
+                            <option>6º</option>
+                            <option>7º</option>
+                            <option>8º</option>
+                            <option>9º</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Turma</label>
+                        <input type="text" id="turmaTurma" placeholder="Ex: A" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Nº Alunos</label>
+                        <input type="number" id="turmaAlunos" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Taxa Sucesso Inicial (%)</label>
+                        <input type="number" id="turmaSucesso" min="0" max="100" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal('addTurmaModal')" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Prática Modal -->
+    <div id="addPraticaModal" class="modal">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4 fade-in">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Partilhar Boa Prática</h2>
+            <form onsubmit="addPratica(event)">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Título</label>
+                        <input type="text" id="praticaTitulo" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Metodologia</label>
+                        <select id="praticaMetodologia" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none">
+                            <option value="cooperativa">Aprendizagem Cooperativa</option>
+                            <option value="invertida">Sala de Aula Invertida</option>
+                            <option value="gamificacao">Gamificação</option>
+                            <option value="projetos">Trabalho por Projetos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Disciplina</label>
+                        <input type="text" id="praticaDisciplina" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Descrição</label>
+                        <textarea id="praticaDescricao" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" rows="4" required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-semibold">Autor</label>
+                        <input type="text" id="praticaAutor" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" required>
+                    </div>
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal('addPraticaModal')" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        Partilhar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ===== PERSISTENT DATA STORAGE =====
+        // Storage Helper Functions
+        const Storage = {
+            save: function(key, data) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch (e) {
+                    console.error('Error saving to localStorage:', e);
+                    return false;
+                }
+            },
+            load: function(key, defaultValue = null) {
+                try {
+                    const data = localStorage.getItem(key);
+                    return data ? JSON.parse(data) : defaultValue;
+                } catch (e) {
+                    console.error('Error loading from localStorage:', e);
+                    return defaultValue;
+                }
+            },
+            clear: function(key) {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (e) {
+                    console.error('Error clearing localStorage:', e);
+                    return false;
+                }
+            },
+            clearAll: function() {
+                try {
+                    localStorage.clear();
+                    return true;
+                } catch (e) {
+                    console.error('Error clearing all localStorage:', e);
+                    return false;
+                }
+            }
+        };
+
+        // Default data (used only if localStorage is empty)
+        const defaultDocentes = [
+            { id: 1, nome: 'Maria Silva', departamento: 'Matemática e Ciências', disciplina: 'Matemática', turmas: '7ºA, 8ºB', participacao: 95 },
+            { id: 2, nome: 'João Costa', departamento: 'Línguas', disciplina: 'Português', turmas: '6ºC, 7ºA', participacao: 88 },
+            { id: 3, nome: 'Ana Santos', departamento: 'Ciências Sociais e Humanas', disciplina: 'História', turmas: '8ºA, 9ºB', participacao: 92 },
+            { id: 4, nome: 'Pedro Oliveira', departamento: 'Matemática e Ciências', disciplina: 'Ciências Naturais', turmas: '5ºA', participacao: 85 },
+            { id: 5, nome: 'Sofia Rodrigues', departamento: 'Expressões', disciplina: 'Educação Visual', turmas: '7ºB, 8ºC', participacao: 78 }
+        ];
+
+        // Load data from localStorage or use defaults
+        let currentUser = Storage.load('currentUser', { profile: '', name: '' });
+        let docentes = Storage.load('docentes', defaultDocentes);
+        let turmas = Storage.load('turmas', [
+            { id: 1, ano: '7º', turma: 'A', alunos: 24, sucessoInicial: 78, sucessoAtual: 85 },
+            { id: 2, ano: '6º', turma: 'C', alunos: 22, sucessoInicial: 72, sucessoAtual: 79 },
+            { id: 3, ano: '8º', turma: 'B', alunos: 26, sucessoInicial: 68, sucessoAtual: 76 },
+            { id: 4, ano: '5º', turma: 'A', alunos: 20, sucessoInicial: 82, sucessoAtual: 88 },
+            { id: 5, ano: '9º', turma: 'B', alunos: 23, sucessoInicial: 65, sucessoAtual: 72 },
+            { id: 6, ano: '7º', turma: 'B', alunos: 25, sucessoInicial: 75, sucessoAtual: 81 }
+        ]);
+
+        let praticas = Storage.load('praticas', [
+            {
+                id: 1,
+                titulo: 'Gamificação em Matemática',
+                metodologia: 'gamificacao',
+                disciplina: 'Matemática',
+                descricao: 'Uso de jogos educativos e sistema de pontos para motivar alunos na resolução de problemas matemáticos.',
+                autor: 'Maria Silva',
+                likes: 15
+            },
+            {
+                id: 2,
+                titulo: 'Projeto Interdisciplinar: A Sustentabilidade',
+                metodologia: 'projetos',
+                disciplina: 'Ciências/Geografia',
+                descricao: 'Projeto colaborativo entre Ciências Naturais e Geografia sobre desenvolvimento sustentável.',
+                autor: 'Ana Santos',
+                likes: 23
+            },
+            {
+                id: 3,
+                titulo: 'Flipped Classroom em Português',
+                metodologia: 'invertida',
+                disciplina: 'Português',
+                descricao: 'Vídeos explicativos para casa e trabalho prático em sala de aula sobre análise literária.',
+                autor: 'João Costa',
+                likes: 18
+            }
+        ]);
+
+        let atividades = Storage.load('atividades', {
+            fase1: [
+                { titulo: 'Sessão de Lançamento', data: '2025-09-15', descricao: 'Apresentação da ação "Aprender em Ação"' },
+                { titulo: 'Workshop: Metodologias Ativas', data: '2025-10-05', descricao: 'Da teoria à prática' },
+                { titulo: 'Constituição Grupo-Piloto', data: '2025-10-20', descricao: 'Definição de docentes e turmas participantes' },
+                { titulo: 'Círculo de Partilha 1', data: '2025-11-10', descricao: 'Primeira reunião mensal do núcleo pioneiro' }
+            ],
+            fase2: [
+                { titulo: 'Início Implementação', data: '2026-01-08', descricao: 'Aplicação das metodologias nas turmas-piloto' },
+                { titulo: 'Intervisão Pedagógica 1', data: '2026-01-22', descricao: 'Observação entre pares - Primeira ronda' },
+                { titulo: 'Círculo de Partilha 2', data: '2026-02-12', descricao: 'Partilha de experiências e desafios' },
+                { titulo: 'Workshop: Gamificação', data: '2026-03-05', descricao: 'Formação específica sobre gamificação' }
+            ],
+            fase3: [
+                { titulo: 'Recolha de Dados', data: '2026-04-10', descricao: 'Questionários e análise de resultados' },
+                { titulo: 'Preparação Jornadas', data: '2026-05-15', descricao: 'Organização da apresentação final' },
+                { titulo: 'Jornadas Pedagógicas', data: '2026-06-20', descricao: 'Apresentação de resultados e boas práticas' },
+                { titulo: 'Relatório Final', data: '2026-06-30', descricao: 'Elaboração e entrega do relatório final' }
+            ]
+        });
+
+        let testemunhos = Storage.load('testemunhos', [
+            { aluno: 'Ana, 7ºA', texto: 'As aulas ficaram muito mais divertidas! Adoro trabalhar em grupo.', data: '2025-11-15' },
+            { aluno: 'Rui, 8ºB', texto: 'Sinto que aprendo melhor quando fazemos projetos práticos.', data: '2025-11-18' },
+            { aluno: 'Sofia, 6ºC', texto: 'A gamificação na matemática tornou tudo mais fácil de entender!', data: '2025-11-20' }
+        ]);
+
+        // Initialize
+        function init() {
+            renderDocentesTable();
+            renderTurmasGrid();
+            renderPraticasGrid();
+            renderActivities();
+            renderMuralAlunos();
+            initCharts();
+        }
+
+        // Login
+        function login(e) {
+            e.preventDefault();
+            currentUser.profile = document.getElementById('loginProfile').value;
+            currentUser.name = document.getElementById('loginName').value;
+            Storage.save('currentUser', currentUser);
+            document.getElementById('userName').textContent = currentUser.name;
+            closeModal('loginModal');
+            document.getElementById('mainContent').classList.remove('hidden');
+            init();
+        }
+
+        function logout() {
+            currentUser = { profile: '', name: '' };
+            Storage.save('currentUser', currentUser);
+            document.getElementById('loginModal').classList.add('active');
+            document.getElementById('mainContent').classList.add('hidden');
+        }
+
+        // Tab Navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('text-gray-600', 'hover:text-gray-800');
+            });
+            event.target.closest('.tab-button').classList.add('tab-active');
+            event.target.closest('.tab-button').classList.remove('text-gray-600', 'hover:text-gray-800');
+        }
+
+        // Notifications
+        function toggleNotifications() {
+            const notifPanel = document.getElementById('notifPanel');
+            const dataMenu = document.getElementById('dataMenuPanel');
+            dataMenu.classList.add('hidden');
+            notifPanel.classList.toggle('hidden');
+        }
+
+        function toggleDataMenu() {
+            const notifPanel = document.getElementById('notifPanel');
+            const dataMenu = document.getElementById('dataMenuPanel');
+            notifPanel.classList.add('hidden');
+            dataMenu.classList.toggle('hidden');
+        }
+
+        // Data Management Functions
+        function backupData() {
+            const allData = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                currentUser: currentUser,
+                docentes: docentes,
+                turmas: turmas,
+                praticas: praticas,
+                atividades: atividades,
+                testemunhos: testemunhos
+            };
+            
+            const dataStr = JSON.stringify(allData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            a.download = `agir-aprender-backup-${dateStr}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('✓ Backup criado com sucesso!\n\nO ficheiro foi guardado no seu computador.');
+            toggleDataMenu();
+        }
+
+        function restoreData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!confirm('Tem a certeza que deseja restaurar este backup?\n\nOs dados atuais serão substituídos.')) {
+                event.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    
+                    // Validate backup structure
+                    if (!backup.version || !backup.docentes || !backup.turmas) {
+                        throw new Error('Ficheiro de backup inválido');
+                    }
+                    
+                    // Restore data
+                    currentUser = backup.currentUser || { profile: '', name: '' };
+                    docentes = backup.docentes || [];
+                    turmas = backup.turmas || [];
+                    praticas = backup.praticas || [];
+                    atividades = backup.atividades || { fase1: [], fase2: [], fase3: [] };
+                    testemunhos = backup.testemunhos || [];
+                    
+                    // Save to localStorage
+                    Storage.save('currentUser', currentUser);
+                    Storage.save('docentes', docentes);
+                    Storage.save('turmas', turmas);
+                    Storage.save('praticas', praticas);
+                    Storage.save('atividades', atividades);
+                    Storage.save('testemunhos', testemunhos);
+                    
+                    // Refresh UI
+                    if (currentUser.name) {
+                        document.getElementById('userName').textContent = currentUser.name;
+                    }
+                    init();
+                    
+                    alert('✓ Backup restaurado com sucesso!\n\nOs dados foram carregados.');
+                    toggleDataMenu();
+                    
+                } catch (error) {
+                    alert('✗ Erro ao restaurar backup:\n\n' + error.message);
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function resetToDefaults() {
+            if (!confirm('Tem a certeza que deseja repor os dados predefinidos?\n\nTodos os dados atuais serão perdidos!\n\nRecomendamos fazer backup primeiro.')) {
+                return;
+            }
+            
+            // Reset to default data
+            currentUser = { profile: '', name: '' };
+            docentes = defaultDocentes;
+            turmas = [
+                { id: 1, ano: '7º', turma: 'A', alunos: 24, sucessoInicial: 78, sucessoAtual: 85 },
+                { id: 2, ano: '6º', turma: 'C', alunos: 22, sucessoInicial: 72, sucessoAtual: 79 },
+                { id: 3, ano: '8º', turma: 'B', alunos: 26, sucessoInicial: 68, sucessoAtual: 76 },
+                { id: 4, ano: '5º', turma: 'A', alunos: 20, sucessoInicial: 82, sucessoAtual: 88 },
+                { id: 5, ano: '9º', turma: 'B', alunos: 23, sucessoInicial: 65, sucessoAtual: 72 },
+                { id: 6, ano: '7º', turma: 'B', alunos: 25, sucessoInicial: 75, sucessoAtual: 81 }
+            ];
+            praticas = [
+                {
+                    id: 1,
+                    titulo: 'Gamificação em Matemática',
+                    metodologia: 'gamificacao',
+                    disciplina: 'Matemática',
+                    descricao: 'Uso de jogos educativos e sistema de pontos para motivar alunos na resolução de problemas matemáticos.',
+                    autor: 'Maria Silva',
+                    likes: 15
+                },
+                {
+                    id: 2,
+                    titulo: 'Projeto Interdisciplinar: A Sustentabilidade',
+                    metodologia: 'projetos',
+                    disciplina: 'Ciências/Geografia',
+                    descricao: 'Projeto colaborativo entre Ciências Naturais e Geografia sobre desenvolvimento sustentável.',
+                    autor: 'Ana Santos',
+                    likes: 23
+                },
+                {
+                    id: 3,
+                    titulo: 'Flipped Classroom em Português',
+                    metodologia: 'invertida',
+                    disciplina: 'Português',
+                    descricao: 'Vídeos explicativos para casa e trabalho prático em sala de aula sobre análise literária.',
+                    autor: 'João Costa',
+                    likes: 18
+                }
+            ];
+            atividades = {
+                fase1: [
+                    { titulo: 'Sessão de Lançamento', data: '2025-09-15', descricao: 'Apresentação da ação "Aprender em Ação"' },
+                    { titulo: 'Workshop: Metodologias Ativas', data: '2025-10-05', descricao: 'Da teoria à prática' },
+                    { titulo: 'Constituição Grupo-Piloto', data: '2025-10-20', descricao: 'Definição de docentes e turmas participantes' },
+                    { titulo: 'Círculo de Partilha 1', data: '2025-11-10', descricao: 'Primeira reunião mensal do núcleo pioneiro' }
+                ],
+                fase2: [
+                    { titulo: 'Início Implementação', data: '2026-01-08', descricao: 'Aplicação das metodologias nas turmas-piloto' },
+                    { titulo: 'Intervisão Pedagógica 1', data: '2026-01-22', descricao: 'Observação entre pares - Primeira ronda' },
+                    { titulo: 'Círculo de Partilha 2', data: '2026-02-12', descricao: 'Partilha de experiências e desafios' },
+                    { titulo: 'Workshop: Gamificação', data: '2026-03-05', descricao: 'Formação específica sobre gamificação' }
+                ],
+                fase3: [
+                    { titulo: 'Recolha de Dados', data: '2026-04-10', descricao: 'Questionários e análise de resultados' },
+                    { titulo: 'Preparação Jornadas', data: '2026-05-15', descricao: 'Organização da apresentação final' },
+                    { titulo: 'Jornadas Pedagógicas', data: '2026-06-20', descricao: 'Apresentação de resultados e boas práticas' },
+                    { titulo: 'Relatório Final', data: '2026-06-30', descricao: 'Elaboração e entrega do relatório final' }
+                ]
+            };
+            testemunhos = [
+                { aluno: 'Ana, 7ºA', texto: 'As aulas ficaram muito mais divertidas! Adoro trabalhar em grupo.', data: '2025-11-15' },
+                { aluno: 'Rui, 8ºB', texto: 'Sinto que aprendo melhor quando fazemos projetos práticos.', data: '2025-11-18' },
+                { aluno: 'Sofia, 6ºC', texto: 'A gamificação na matemática tornou tudo mais fácil de entender!', data: '2025-11-20' }
+            ];
+            
+            // Clear localStorage
+            Storage.clearAll();
+            
+            // Save defaults
+            Storage.save('currentUser', currentUser);
+            Storage.save('docentes', docentes);
+            Storage.save('turmas', turmas);
+            Storage.save('praticas', praticas);
+            Storage.save('atividades', atividades);
+            Storage.save('testemunhos', testemunhos);
+            
+            // Redirect to login
+            logout();
+            alert('✓ Dados repostos para predefinições!\n\nPor favor, faça login novamente.');
+            toggleDataMenu();
+        }
+
+        function clearAllData() {
+            if (!confirm('⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\nTem a certeza que deseja APAGAR TODOS OS DADOS?\n\nRecomendamos fortemente fazer backup primeiro.')) {
+                return;
+            }
+            
+            if (!confirm('Última confirmação: APAGAR TUDO?')) {
+                return;
+            }
+            
+            Storage.clearAll();
+            location.reload();
+        }
+
+        // Modal Functions
+        function showAddDocenteModal() {
+            document.getElementById('addDocenteModal').classList.add('active');
+        }
+
+        function showAddTurmaModal() {
+            document.getElementById('addTurmaModal').classList.add('active');
+        }
+
+        function showAddPraticaModal() {
+            document.getElementById('addPraticaModal').classList.add('active');
+        }
+
+        function showAddTestemunho() {
+            const texto = prompt('Partilha a tua experiência com as novas metodologias:');
+            if (texto) {
+                testemunhos.push({
+                    aluno: currentUser.name,
+                    texto: texto,
+                    data: new Date().toISOString().split('T')[0]
+                });
+                Storage.save('testemunhos', testemunhos);
+                renderMuralAlunos();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Add Functions
+        function addDocente(e) {
+            e.preventDefault();
+            const newDocente = {
+                id: docentes.length + 1,
+                nome: document.getElementById('docenteNome').value,
+                departamento: document.getElementById('docenteDepartamento').value,
+                disciplina: document.getElementById('docenteDisciplina').value,
+                turmas: document.getElementById('docenteTurmas').value,
+                participacao: 0
+            };
+            docentes.push(newDocente);
+            Storage.save('docentes', docentes);
+            renderDocentesTable();
+            updateKPI('docentes', docentes.length);
+            closeModal('addDocenteModal');
+            e.target.reset();
+        }
+
+        function addTurma(e) {
+            e.preventDefault();
+            const newTurma = {
+                id: turmas.length + 1,
+                ano: document.getElementById('turmaAno').value,
+                turma: document.getElementById('turmaTurma').value,
+                alunos: parseInt(document.getElementById('turmaAlunos').value),
+                sucessoInicial: parseInt(document.getElementById('turmaSucesso').value),
+                sucessoAtual: parseInt(document.getElementById('turmaSucesso').value)
+            };
+            turmas.push(newTurma);
+            Storage.save('turmas', turmas);
+            renderTurmasGrid();
+            updateKPI('turmas', turmas.length);
+            closeModal('addTurmaModal');
+            e.target.reset();
+        }
+
+        function addPratica(e) {
+            e.preventDefault();
+            const newPratica = {
+                id: praticas.length + 1,
+                titulo: document.getElementById('praticaTitulo').value,
+                metodologia: document.getElementById('praticaMetodologia').value,
+                disciplina: document.getElementById('praticaDisciplina').value,
+                descricao: document.getElementById('praticaDescricao').value,
+                autor: document.getElementById('praticaAutor').value,
+                likes: 0
+            };
+            praticas.push(newPratica);
+            Storage.save('praticas', praticas);
+            renderPraticasGrid();
+            closeModal('addPraticaModal');
+            e.target.reset();
+        }
+
+        function addActivity(e) {
+            e.preventDefault();
+            const fase = document.getElementById('activityPhase').value;
+            const newActivity = {
+                titulo: document.getElementById('activityTitle').value,
+                data: document.getElementById('activityDate').value,
+                descricao: document.getElementById('activityDesc').value
+            };
+            atividades[`fase${fase}`].push(newActivity);
+            Storage.save('atividades', atividades);
+            renderActivities();
+            e.target.reset();
+        }
+
+        // Render Functions
+        function renderDocentesTable() {
+            const tbody = document.getElementById('docentesTableBody');
+            tbody.innerHTML = docentes.map(doc => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
+                                <span class="text-purple-600 font-bold">${doc.nome.charAt(0)}</span>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${doc.nome}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${doc.departamento}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${doc.disciplina}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${doc.turmas}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: ${doc.participacao}%"></div>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-700">${doc.participacao}%</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button onclick="viewDocente(${doc.id})" class="text-purple-600 hover:text-purple-900 font-semibold">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderTurmasGrid() {
+            const grid = document.getElementById('turmasGrid');
+            grid.innerHTML = turmas.map(turma => {
+                const melhoria = turma.sucessoAtual - turma.sucessoInicial;
+                const melhoriaColor = melhoria >= 5 ? 'text-green-600' : 'text-orange-600';
+                return `
+                    <div class="card bg-white rounded-xl shadow-lg p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-2xl font-bold text-gray-800">${turma.ano}${turma.turma}</h3>
+                                <p class="text-sm text-gray-600">${turma.alunos} alunos</p>
+                            </div>
+                            <div class="bg-purple-100 p-3 rounded-full">
+                                <i class="fas fa-users text-purple-600"></i>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600">Sucesso Inicial</span>
+                                    <span class="font-semibold">${turma.sucessoInicial}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-gray-400 h-2 rounded-full" style="width: ${turma.sucessoInicial}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600">Sucesso Atual</span>
+                                    <span class="font-semibold">${turma.sucessoAtual}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: ${turma.sucessoAtual}%"></div>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t">
+                                <span class="text-sm font-semibold ${melhoriaColor}">
+                                    <i class="fas fa-arrow-${melhoria >= 0 ? 'up' : 'down'}"></i>
+                                    ${melhoria >= 0 ? '+' : ''}${melhoria}% de melhoria
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPraticasGrid(filter = 'todas') {
+            const grid = document.getElementById('praticasGrid');
+            const filtered = filter === 'todas' ? praticas : praticas.filter(p => p.metodologia === filter);
+            
+            const metodologiaIcons = {
+                cooperativa: 'fa-users',
+                invertida: 'fa-sync-alt',
+                gamificacao: 'fa-gamepad',
+                projetos: 'fa-project-diagram'
+            };
+
+            const metodologiaColors = {
+                cooperativa: 'bg-blue-100 text-blue-600',
+                invertida: 'bg-purple-100 text-purple-600',
+                gamificacao: 'bg-green-100 text-green-600',
+                projetos: 'bg-orange-100 text-orange-600'
+            };
+
+            grid.innerHTML = filtered.map(pratica => `
+                <div class="card bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="${metodologiaColors[pratica.metodologia]} p-3 rounded-lg">
+                            <i class="fas ${metodologiaIcons[pratica.metodologia]} text-2xl"></i>
+                        </div>
+                        <button onclick="likePratica(${pratica.id})" class="text-red-500 hover:text-red-600">
+                            <i class="fas fa-heart"></i> ${pratica.likes}
+                        </button>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">${pratica.titulo}</h3>
+                    <p class="text-sm text-gray-600 mb-3">${pratica.descricao}</p>
+                    <div class="flex items-center justify-between pt-3 border-t">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                                <span class="text-purple-600 font-bold text-xs">${pratica.autor.charAt(0)}</span>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-gray-700">${pratica.autor}</p>
+                                <p class="text-xs text-gray-500">${pratica.disciplina}</p>
+                            </div>
+                        </div>
+                        <button class="text-purple-600 hover:text-purple-800 text-sm font-semibold">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderActivities() {
+            ['fase1', 'fase2', 'fase3'].forEach((fase, index) => {
+                const container = document.getElementById(`${fase}Activities`);
+                container.innerHTML = atividades[fase].map(act => `
+                    <div class="p-4 bg-gray-50 rounded-lg border-l-4 border-${['purple', 'blue', 'green'][index]}-500">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800">${act.titulo}</h4>
+                                <p class="text-sm text-gray-600 mt-1">${act.descricao}</p>
+                            </div>
+                            <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full ml-4">${new Date(act.data).toLocaleDateString('pt-PT')}</span>
+                        </div>
+                    </div>
+                `).join('');
+            });
+        }
+
+        function renderMuralAlunos() {
+            const mural = document.getElementById('muralAlunos');
+            mural.innerHTML = testemunhos.map(test => `
+                <div class="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-purple-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-800 mb-2">"${test.texto}"</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-semibold text-gray-700">${test.aluno}</span>
+                                <span class="text-xs text-gray-500">${new Date(test.data).toLocaleDateString('pt-PT')}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter Functions
+        function filterPraticas(tipo) {
+            document.querySelectorAll('.pratica-filter').forEach(btn => {
+                btn.classList.remove('bg-purple-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            event.target.classList.add('bg-purple-600', 'text-white');
+            renderPraticasGrid(tipo);
+        }
+
+        // Interaction Functions
+        function likePratica(id) {
+            const pratica = praticas.find(p => p.id === id);
+            if (pratica) {
+                pratica.likes++;
+                Storage.save('praticas', praticas);
+                renderPraticasGrid();
+            }
+        }
+
+        function viewDocente(id) {
+            const docente = docentes.find(d => d.id === id);
+            alert(`Perfil de ${docente.nome}\n\nDepartamento: ${docente.departamento}\nDisciplina: ${docente.disciplina}\nTurmas: ${docente.turmas}\nParticipação: ${docente.participacao}%`);
+        }
+
+        function updateKPI(tipo, valor) {
+            document.getElementById(`kpi${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).textContent = valor;
+        }
+
+        // Monitoring Functions
+        function showQuestionario(tipo) {
+            alert(`Abrindo questionário para ${tipo}...\n\nEsta funcionalidade abrirá um formulário detalhado de avaliação.`);
+        }
+
+        function showObservacao() {
+            alert('Abrindo grelha de observação de aula...\n\nEsta funcionalidade abrirá um formulário de intervisão pedagógica.');
+        }
+
+        function exportRelatorio() {
+            const data = {
+                docentes: docentes,
+                turmas: turmas,
+                praticas: praticas,
+                atividades: atividades,
+                dataExportacao: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `relatorio-agir-aprender-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Charts
+        function initCharts() {
+            // Metodologias Chart
+            const ctxMetodologias = document.getElementById('metodologiasChart').getContext('2d');
+            new Chart(ctxMetodologias, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aprendizagem Cooperativa', 'Sala Invertida', 'Gamificação', 'Projetos'],
+                    datasets: [{
+                        data: [30, 20, 25, 25],
+                        backgroundColor: ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Process Chart
+            const ctxProcess = document.getElementById('processChart').getContext('2d');
+            new Chart(ctxProcess, {
+                type: 'bar',
+                data: {
+                    labels: ['Docentes', 'Turmas', 'Formações', 'Reuniões', 'Observações'],
+                    datasets: [{
+                        label: 'Realizado',
+                        data: [12, 6, 2, 8, 8],
+                        backgroundColor: '#8B5CF6'
+                    }, {
+                        label: 'Meta',
+                        data: [10, 5, 2, 6, 10],
+                        backgroundColor: '#D1D5DB'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+
+        // Click outside notifications to close
+        document.addEventListener('click', function(event) {
+            const notifPanel = document.getElementById('notifPanel');
+            const dataMenuPanel = document.getElementById('dataMenuPanel');
+            const notifButton = event.target.closest('button[onclick="toggleNotifications()"]');
+            const dataButton = event.target.closest('button[onclick="toggleDataMenu()"]');
+            
+            if (!notifPanel.contains(event.target) && !notifButton) {
+                notifPanel.classList.add('hidden');
+            }
+            
+            if (!dataMenuPanel.contains(event.target) && !dataButton) {
+                dataMenuPanel.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
